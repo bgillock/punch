@@ -34,4 +34,4 @@
 
 #include "punch.h"
 #include "./TwoValueAttachment/TwoValueAttachment.cpp"
-#include "./Slider/SmoothSlider.h"
+#include "./Slider/SmoothSlider.cpp"

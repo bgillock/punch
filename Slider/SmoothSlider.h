@@ -12,12 +12,12 @@
 
 namespace punch
 {
-    class SmoothSlider : public juce::Slider
+    struct SmoothSlider : public juce::Slider
     {
     public:
         SmoothSlider(float nWheel, float sWheel) : Slider(), NormalWheel(nWheel), SensitiveWheel(sWheel) {}
 
-        void mouseWheelMove(const Mouse& mouse, const Wheel& wheel) override;
+        void mouseWheelMove(const juce::MouseEvent& mouse, const juce::MouseWheelDetails& wheel) override;
     private:
         float NormalWheel = .8f;
         float SensitiveWheel = .05f;
