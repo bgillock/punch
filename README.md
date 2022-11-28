@@ -1,12 +1,12 @@
 # Punch Modules for JUCE
 
 ## Install as submodule in your repo
-1. cd to you user module folder as specified in Projucer->File->Global paths
+1. cd to your user module folder as specified in Projucer->File->Global paths
 2. git clone https://github.com/bgillock/punch.git .
 3. git submodule add -b master https://github.com/bgillock/punch.git punch
 4. Commit changes to main repo
 ### or
-## Clone into user_module folder
+## Clone into user module folder
 1. cd to you user module folder as specified in Projucer->File->Global paths
 2. git clone https://github.com/bgillock/punch.git
 
