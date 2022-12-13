@@ -56,3 +56,4 @@
 #include <juce_core/juce_core.h>
 #include "./TwoValueAttachment/TwoValueAttachment.h"
 #include "./Slider/SmoothSlider.h"
+#include "./Fader/FaderSlider.h"

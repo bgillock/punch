@@ -35,3 +35,4 @@
 #include "punch.h"
 #include "./TwoValueAttachment/TwoValueAttachment.cpp"
 #include "./Slider/SmoothSlider.cpp"
+#include "./Fader/FaderSlider.cpp"
