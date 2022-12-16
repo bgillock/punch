@@ -57,3 +57,6 @@
 #include "./TwoValueAttachment/TwoValueAttachment.h"
 #include "./Slider/SmoothSlider.h"
 #include "./Fader/FaderSlider.h"
+#include "./Annotation/dbAnnoComponent.h"
+#include "./Meter/MaximumAmp.h"
+#include "./Meter/StereoLevelMeter.h"

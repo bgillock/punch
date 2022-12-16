@@ -36,3 +36,6 @@
 #include "./TwoValueAttachment/TwoValueAttachment.cpp"
 #include "./Slider/SmoothSlider.cpp"
 #include "./Fader/FaderSlider.cpp"
+#include "./Annotation/dbAnnoComponent.cpp"
+#include "./Meter/MaximumAmp.cpp"
+#include "./Meter/StereoLevelMeter.cpp"
