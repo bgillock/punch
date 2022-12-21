@@ -101,6 +101,95 @@ namespace punch {
             _signal = false;
         }
     }
+    
+    void SimpleBuffer::init(int maxsize, int numChannels, bool isUsingDoublePrecision)
+    {
+        _isUsingDouble = isUsingDoublePrecision;
+        _maxSize = maxsize;
+        _nChannels = numChannels;
+        if (!_isUsingDouble)
+        {
+            _floatBuffer = std::make_unique<juce::AudioBuffer<float>>(_nChannels, _maxSize);
+            _doubleBuffer = std::make_unique<juce::AudioBuffer<double>>(1, 1);
+        }
+        else
+        {
+            _floatBuffer = std::make_unique<juce::AudioBuffer<float>>(1, 1);
+            _doubleBuffer = std::make_unique<juce::AudioBuffer<double>>(_nChannels, _maxSize);
+        }
+        _nSamples = 0;
+    }
+
+    void SimpleBuffer::clear()
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        if (lock.isLocked())
+        {
+            _nSamples = 0;
+        }
+    }
+    int SimpleBuffer::getNSamples()
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        return _nSamples;
+    }
+    int SimpleBuffer::getSize()
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        return _maxSize;
+    }
+    int SimpleBuffer::getNChannels()
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        return _nChannels;
+    }
+    bool SimpleBuffer::getIsUsingDouble()
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        return _isUsingDouble;
+    }
+    void SimpleBuffer::capture(juce::AudioBuffer<float> amps, int channel)
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        jassert(!_isUsingDouble);
+        if (lock.isLocked())
+        {
+            int nsamps = amps.getNumSamples();
+            jassert(_nSamples + amps.getNumSamples() < _maxSize); // buffer overflow!!
+            auto readptr = amps.getReadPointer(channel);
+            _floatBuffer->copyFrom(channel, _nSamples, readptr, nsamps);
+            _nSamples += nsamps;
+        }
+    }
+    void SimpleBuffer::capture(juce::AudioBuffer<double> amps, int channel)
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        jassert(_isUsingDouble);
+        if (lock.isLocked())
+        {
+            int nsamps = amps.getNumSamples();
+            jassert(_nSamples + amps.getNumSamples() < _maxSize); // buffer overflow!!
+            auto readptr = amps.getReadPointer(channel);
+            _doubleBuffer->copyFrom(channel, _nSamples, readptr, nsamps);
+            _nSamples += nsamps;
+        }
+    }
+    int SimpleBuffer::getSamples(int channel, float* samplesreturned)
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        jassert(!_isUsingDouble);
+        auto readptr = _floatBuffer->getReadPointer(channel);
+        juce::FloatVectorOperations::copy(samplesreturned,readptr, _nSamples);
+        return _nSamples;
+    }
+    int SimpleBuffer::getSamples(int channel, double* samplesreturned)
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        jassert(_isUsingDouble);
+        auto readptr = _doubleBuffer->getReadPointer(channel);
+        juce::FloatVectorOperations::copy(samplesreturned, readptr, _nSamples);
+        return _nSamples;
+    }
     class VUHistogram
     {
     public:
