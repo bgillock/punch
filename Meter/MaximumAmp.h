@@ -56,11 +56,28 @@ namespace punch {
         int getNChannels();
         bool getIsUsingDouble();
         juce::AudioBuffer<float> getBuffer();
-        void append(juce::AudioBuffer<float> amps);
+        void append(juce::AudioBuffer<float> amps, int n);
         void append(juce::AudioBuffer<float> amps, int start, int n);
         void trimStart(int size);
         const float* getChannelReadPtr(int channel);
         int getSamples(int channel, double* samplesreturned);
+        void dump(std::string pre)
+        {
+            int a = 0;
+
+            for (int c = 0; c < _floatBuffer->getNumChannels(); c++)
+            {
+                std::string out = ""; 
+                out += std::to_string(c) + "=[";
+                auto readptr = _floatBuffer->getReadPointer(c);
+                for (int i = 0; i < std::min(8,_nSamples); i++)
+                {
+                    out += std::to_string(readptr[i]) + ",";
+                }
+                continue;
+            }
+            return;
+        };
     private:
         std::unique_ptr<juce::AudioBuffer<float>> _floatBuffer;
         std::unique_ptr<juce::AudioBuffer<double>> _doubleBuffer;

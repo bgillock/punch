@@ -175,13 +175,12 @@ namespace punch {
             _nSamples += nsamps;
         }
     }
-    void SimpleBuffer::append(juce::AudioBuffer<float> amps)
+    void SimpleBuffer::append(juce::AudioBuffer<float> amps, int nsamps)
     {
         const juce::SpinLock::ScopedTryLockType lock(_mutex);
         jassert(!_isUsingDouble);
         if (lock.isLocked())
         {
-            int nsamps = amps.getNumSamples();
             int nchannels = amps.getNumChannels();
             if (nsamps + _nSamples >= _maxSize)
             {
@@ -192,6 +191,9 @@ namespace punch {
             {
                 auto readptr = amps.getReadPointer(c);
                 _floatBuffer->copyFrom(c, _nSamples, readptr, nsamps);
+                //float r = _floatBuffer->getRMSLevel(c, _nSamples, nsamps);
+                //float ar = amps.getRMSLevel(c, 0, nsamps);
+                //int x = 0;
             }
             _nSamples += nsamps;
         }
