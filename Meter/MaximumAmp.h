@@ -48,12 +48,13 @@ namespace punch {
     public:
         SimpleBuffer() { _maxSize = 0; };
         void init(int size, int nChannels, bool isUsingDouble);
-        void capture(juce::AudioBuffer<float> bamps, juce::AudioBuffer<float> aamps);
-        void capture(juce::AudioBuffer<double> bamps, juce::AudioBuffer<double> aamps);
+        void capture(juce::AudioBuffer<float> bamps, juce::AudioBuffer<float> aamps, int latency);
+        void capture(juce::AudioBuffer<double> bamps, juce::AudioBuffer<double> aamps, int latency);
         void clear();
         int getNSamples();
         int getSize();
         int getNChannels();
+        int getLatencySamples();
         bool getIsUsingDouble();
         juce::AudioBuffer<float> getBuffer();
         void append(juce::AudioBuffer<float> amps, int n);
@@ -82,6 +83,7 @@ namespace punch {
         std::unique_ptr<juce::AudioBuffer<float>> _floatBuffer;
         std::unique_ptr<juce::AudioBuffer<double>> _doubleBuffer;
         juce::SpinLock _mutex;
+        int _latencySamples = 0;
         int _maxSize;
         int _nSamples;
         int _nChannels;
