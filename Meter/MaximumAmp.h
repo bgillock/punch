@@ -48,8 +48,8 @@ namespace punch {
     public:
         SimpleBuffer() { _maxSize = 0; };
         void init(int size, int nChannels, bool isUsingDouble);
-        void capture(juce::AudioBuffer<float> bamps, juce::AudioBuffer<float> aamps, int latency);
-        void capture(juce::AudioBuffer<double> bamps, juce::AudioBuffer<double> aamps, int latency);
+        void capture(juce::AudioBuffer<float>& bamps, juce::AudioBuffer<float>& aamps, int latency);
+        void capture(juce::AudioBuffer<double>& bamps, juce::AudioBuffer<double>& aamps, int latency);
         void clear();
         int getNSamples();
         int getSize();

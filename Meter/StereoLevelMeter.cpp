@@ -97,13 +97,13 @@ namespace punch {
     }
     void StereoLevelMeter::capture(juce::AudioBuffer<float> amps)
     {
-        leftLevelMeter.capture(amps, 0);
-        rightLevelMeter.capture(amps, 1);
+        leftLevelMeter.capture(amps, 0); 
+        rightLevelMeter.capture(amps, juce::jmin(amps.getNumChannels()-1,1));
     };
     void StereoLevelMeter::capture(juce::AudioBuffer<double> amps)
     {
         leftLevelMeter.capture(amps, 0);
-        rightLevelMeter.capture(amps, 1);
+        rightLevelMeter.capture(amps, juce::jmin(amps.getNumChannels()-1,1));
     };
 
     //-----------------------------------------------------------------------------------------------------------

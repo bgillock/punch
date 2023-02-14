@@ -154,7 +154,7 @@ namespace punch {
         const juce::SpinLock::ScopedLockType lock(_mutex);
         return _isUsingDouble;
     }
-    void SimpleBuffer::capture(juce::AudioBuffer<float> bamps, juce::AudioBuffer<float> aamps, int latency)
+    void SimpleBuffer::capture(juce::AudioBuffer<float>& bamps, juce::AudioBuffer<float>& aamps, int latency)
     {
         const juce::SpinLock::ScopedTryLockType lock(_mutex);
         jassert(!_isUsingDouble);
@@ -239,7 +239,7 @@ namespace punch {
             _nSamples -= size;
         }
     }
-    void SimpleBuffer::capture(juce::AudioBuffer<double> bamps, juce::AudioBuffer<double> aamps, int latency)
+    void SimpleBuffer::capture(juce::AudioBuffer<double>& bamps, juce::AudioBuffer<double>& aamps, int latency)
     {
         const juce::SpinLock::ScopedTryLockType lock(_mutex);
         jassert(_isUsingDouble);
