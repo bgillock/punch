@@ -107,7 +107,7 @@ namespace punch {
         void setRange(juce::Range<double> r);
         int getActualHeight();
         void setHeight(int height);
-        void StereoLevelMeter::timerCallback() override;
+        void timerCallback() override;
     private:
 
         UADLevelMeter leftLevelMeter;
