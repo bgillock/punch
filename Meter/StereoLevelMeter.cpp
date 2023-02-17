@@ -17,7 +17,7 @@ namespace punch {
         leftLevelMeter(marginTop, marginBottom, minAmp, maxAmp, incAmp),
         rightLevelMeter(marginTop, marginBottom, minAmp, maxAmp, incAmp),
         leftAnno(minAmp, maxAmp, incAmp, marginTop, marginBottom, leftAnnoWidth, juce::Justification::left),
-        rightAnno(minAmp, maxAmp, incAmp, marginTop, marginBottom, rightAnnoWidth, juce::Justification::right)
+        rightAnno(minAmp, maxAmp, incAmp, marginTop, marginBottom, rightAnnoWidth, juce::Justification::right, true)
     {
         _leftAnnoWidth = leftAnnoWidth;
         _rightAnnoWidth = rightAnnoWidth;
@@ -145,7 +145,7 @@ namespace punch {
 
         int tx = centerx - _lightwidth / 2;
 
-        drawClipped(g, tx, _mTop - _spacing - _clippedheight, _lightwidth, _clippedheight, maxAmp.clipped());
+        drawClipped(g, tx, _mTop - 6 - _clippedheight, _lightwidth, _clippedheight, maxAmp.clipped());
 
         for (int l = _nLights - 1; l >= 0; l--)
         {
@@ -153,7 +153,7 @@ namespace punch {
             y += _lightheight + _spacing;
         }
 
-        drawSignal(g, tx, _mTop + (_nLights * (_lightheight + _spacing)), _lightwidth, _signalheight, maxAmp.signal());
+        drawSignal(g, tx, _mTop + (_nLights * (_lightheight + _spacing)) + 6.0, _lightwidth, _signalheight, maxAmp.signal());
 
         maxAmp.clear();
         return;
@@ -338,7 +338,106 @@ namespace punch {
         g.drawRect(x, y, width, height, (int)_lightborder);
     }
 
-    
+    //---------------------------------------------------------------------------------------------------
+    SimpleBarLevelMeter::SimpleBarLevelMeter(int marginTop, int marginBottom, float minAmp, float maxAmp, float incAmp) :
+        LevelMeter(marginTop, marginBottom, minAmp, maxAmp, incAmp)
+    {
+        _peakholdTimes = 10; // number of times to leave peak 
+        _lightheight = 2;
+        _lightwidth = 8;
+        _spacing = 1;
+        _clippedheight = 7;
+        _signalheight = 7;
+        _nLights = 10;
+    };
+
+    void SimpleBarLevelMeter::setHeight(int height)
+    {
+
+        int topy = _mTop;
+        int bottomy = height - _mBottom;
+
+        _nLights = (int)((float)(bottomy - topy + 1) / (_lightheight + _spacing));
+        maxAmp.setNLevels(_nLights);
+        if (_lightColors != nullptr) delete _lightColors;
+        _lightColors = new juce::Colour[_nLights];
+        auto mindb = (float)maxAmp.getMinAmp();
+        auto maxdb = (float)maxAmp.getMaxAmp();
+        float dbPerLight = ((maxdb - mindb) / (float)_nLights);
+
+        for (int l = 0; l < _nLights; l++)
+        {
+            juce::Colour thiscolor = juce::Colour::fromRGB(0, 0, 0);
+            float thisdb = mindb + ((float)l * dbPerLight);
+            if (thisdb > _redLevel - (dbPerLight * 0.5)) thiscolor = juce::Colour::fromRGB(255, 0, 0);
+            else if (thisdb > _orangeLevel - (dbPerLight * 0.5))  thiscolor = juce::Colours::orange;
+            else thiscolor = juce::Colour::fromRGB(0, 255, 0);
+            _lightColors[l] = thiscolor;
+        }
+    }
+
+    void SimpleBarLevelMeter::resized()
+    {
+        auto area = getBounds();
+        setHeight(area.getHeight());
+    }
+
+    int SimpleBarLevelMeter::getActualHeight()
+    {
+        return _mTop + (_nLights * (_lightheight + _spacing)) + _mBottom;
+    }
+    int SimpleBarLevelMeter::getActualWidth()
+    {
+        return _meterWidth;
+    }
+    void SimpleBarLevelMeter::setRedLevel(float level)
+    {
+        _redLevel = level;
+    }
+    void SimpleBarLevelMeter::setOrangeLevel(float level)
+    {
+        _orangeLevel = level;
+    }
+    void SimpleBarLevelMeter::clearClipped()
+    {
+        maxAmp.setClipped(false);
+    }
+
+    void SimpleBarLevelMeter::drawLight(juce::Graphics& g, int x, int y, int width, int height, float* levels, int l)
+    {
+        g.setColour(offColour(_lightColors[l])); // off color
+        if (levels[l] == 1.0) g.setColour(_lightColors[l]);
+        g.fillRect(x, y, width, height);
+
+        //g.setColour(juce::Colours::grey); // border color
+        //g.drawRect(x, y, width, height, (int)_lightborder);
+    }
+
+    void SimpleBarLevelMeter::drawClipped(juce::Graphics& g, int x, int y, int width, int height, bool clipped)
+    {
+        g.setColour(offColour(juce::Colours::red)); // off color
+        if (clipped) g.setColour(juce::Colours::red);
+        g.fillRect(x, y, width, height);
+
+        g.setColour(juce::Colours::grey); // border color
+        //g.drawRect(x, y, width, height, (int)_lightborder);
+    }
+
+    void SimpleBarLevelMeter::drawSignal(juce::Graphics& g, int x, int y, int width, int height, bool signal)
+    {
+        g.setColour(offColour(juce::Colour::fromRGB(0, 255, 0))); // off color
+        if (signal) g.setColour(juce::Colour::fromRGB(0, 255, 0));
+        g.fillRect(x, y, width, height);
+
+        g.setColour(juce::Colours::grey); // border color
+        //g.drawRect(x, y, width, height, (int)_lightborder);
+    }
+
+    juce::Colour SimpleBarLevelMeter::offColour(juce::Colour onColour)
+    {
+        return juce::Colour::fromFloatRGBA(onColour.getFloatRed() * 0.25f, onColour.getFloatGreen() * 0.25f, onColour.getFloatBlue() * 0.25f, 1.0f);
+    }
+
 #include <cstring>
 
     namespace LevelMeterBinaryData

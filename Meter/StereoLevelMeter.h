@@ -70,6 +70,32 @@ namespace punch {
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrawnLEDLevelMeter);
     };
 
+    class SimpleBarLevelMeter : public LevelMeter
+    {
+    public:
+        SimpleBarLevelMeter(int marginTop, int marginBottom, float minAmp, float maxAmp, float incAmp);
+        void resized() override;
+        void setHeight(int height);
+        int getActualHeight();
+        int getActualWidth();
+        void clearClipped();
+        void drawLight(juce::Graphics& g, int x, int y, int width, int height, float* levels, int l);
+        void drawSignal(juce::Graphics& g, int x, int y, int width, int height, bool signal);
+        void drawClipped(juce::Graphics& g, int x, int y, int width, int height, bool clipped);
+        bool canSetRange() { return true; }
+        void setRedLevel(float level);
+        void setOrangeLevel(float level);
+        juce::Colour offColour(juce::Colour onColour);
+    private:
+        const juce::Colour _peakColor = juce::Colour::fromRGB(255, 0, 0);
+        const juce::Colour _signalColor = juce::Colour::fromRGB(0, 255, 0);
+        float _redLevel = -3.0;
+        float _orangeLevel = -18.0;
+        juce::Colour* _lightColors = nullptr;
+        int _meterWidth = 22;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleBarLevelMeter);
+    };
     class UADLevelMeter : public LevelMeter
     {
     public:
@@ -85,6 +111,7 @@ namespace punch {
         bool canSetRange() { return true; }
         void setRedLevel(float level);
         void setOrangeLevel(float level);
+
     private:
         const int _clippedImageOn = 3;
         const int _clippedImageOff = 0;
@@ -117,8 +144,8 @@ namespace punch {
         void timerCallback() override;
     private:
 
-        UADLevelMeter leftLevelMeter;
-        UADLevelMeter rightLevelMeter;
+        SimpleBarLevelMeter leftLevelMeter;
+        SimpleBarLevelMeter rightLevelMeter;
         dbAnnoComponent leftAnno;
         dbAnnoComponent rightAnno;
         float _leftAnnoWidth;

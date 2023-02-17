@@ -14,7 +14,7 @@ namespace punch {
 
     //==============================================================================
 
-    dbAnnoComponent::dbAnnoComponent(float minAmp, float maxAmp, float incAmp, int marginTop, int marginBottom, float annoWidth, juce::Justification style) :
+    dbAnnoComponent::dbAnnoComponent(float minAmp, float maxAmp, float incAmp, int marginTop, int marginBottom, float annoWidth, juce::Justification style, bool showSignalClipped) :
         _style(style)
     {
         _minAmp = minAmp;
@@ -25,6 +25,7 @@ namespace punch {
         _annoWidth = annoWidth;
         _minY = 0; // init in resized
         _maxY = 0; // init in resized
+        _showSignalClipped = showSignalClipped;
     };
 
 
@@ -37,6 +38,9 @@ namespace punch {
         int width = getBounds().getWidth();
         int textWidth = width;
         int textHeight = 10;
+
+        g.setColour(juce::Colours::white);
+        if (_showSignalClipped) g.drawText("clip", 0, (int)(_maxY - (textHeight / 2.0f) - 12.0f), textWidth, textHeight, juce::Justification::centredLeft);
 
         juce::StringPairArray dbAnnoPos = get_db_pairs(_minAmp, _maxAmp, _incAmp);
         g.setFont(juce::Font("Lucinda Sans Typewriter", "Regular", 11.0f));
@@ -63,6 +67,9 @@ namespace punch {
                 g.drawRect(0.0, key.getFloatValue(), (float)width, 0.5f, 0.5f);
             }
         }
+        if (_showSignalClipped) g.drawText("signal", 0, (int)(_minY + (textHeight / 2.0f) ), textWidth, textHeight, juce::Justification::centredLeft);
+
+
     }
 
     void dbAnnoComponent::resized()
