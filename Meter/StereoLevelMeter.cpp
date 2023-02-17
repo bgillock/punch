@@ -26,6 +26,7 @@ namespace punch {
         addAndMakeVisible(rightLevelMeter);
         if (leftAnnoWidth > 0.0) addAndMakeVisible(leftAnno);
         if (rightAnnoWidth > 0.0) addAndMakeVisible(rightAnno);
+        _isMono = false;
     };
 
     bool StereoLevelMeter::canSetRange()
@@ -38,6 +39,10 @@ namespace punch {
         repaint();
     };
 
+    int StereoLevelMeter::getNChannels()
+    {
+        return _isMono ? 1 : 2;
+    }
     void StereoLevelMeter::resized()
     {
         auto r = getLocalBounds();
@@ -45,9 +50,17 @@ namespace punch {
         auto la = _leftAnnoWidth > 1.0 ? r.removeFromLeft((int)_leftAnnoWidth) : r.removeFromLeft((int)(r.getWidth() * _leftAnnoWidth));
         auto ra = _rightAnnoWidth > 1.0 ? r.removeFromRight((int)_rightAnnoWidth) : r.removeFromRight((int)(r.getWidth() * _rightAnnoWidth));
 
-        leftLevelMeter.setBounds(r.removeFromLeft(r.getWidth() / 2));
-        rightLevelMeter.setBounds(r);
-
+        leftLevelMeter.setBounds(r.removeFromLeft(leftLevelMeter.getActualWidth()));
+        if (!_isMono)
+        {
+            rightLevelMeter.setVisible(true);
+            rightLevelMeter.setBounds(r.removeFromRight(rightLevelMeter.getActualWidth()));
+        }
+        else
+        {
+            rightLevelMeter.setVisible(false);
+        }
+        
         leftLevelMeter.resized();
         rightLevelMeter.resized();
 
@@ -73,7 +86,10 @@ namespace punch {
     {
         return juce::jmax(leftLevelMeter.getActualHeight(), rightLevelMeter.getActualHeight());
     }
-
+    int StereoLevelMeter::getActualWidth()
+    {
+        return _leftAnnoWidth + leftLevelMeter.getActualWidth() + (_isMono ? 0 : rightLevelMeter.getActualWidth()) + _rightAnnoWidth;
+    }
     void StereoLevelMeter::clearClipped()
     {
         leftLevelMeter.clearClipped();
@@ -97,15 +113,23 @@ namespace punch {
     }
     void StereoLevelMeter::capture(juce::AudioBuffer<float> amps)
     {
+        if (amps.getNumChannels() == 0) return;
+
         leftLevelMeter.capture(amps, 0); 
-        rightLevelMeter.capture(amps, juce::jmin(amps.getNumChannels()-1,1));
+        _isMono = amps.getNumChannels() == 1;
+
+        if (!_isMono) rightLevelMeter.capture(amps, 1);
     };
     void StereoLevelMeter::capture(juce::AudioBuffer<double> amps)
     {
-        leftLevelMeter.capture(amps, 0);
-        rightLevelMeter.capture(amps, juce::jmin(amps.getNumChannels()-1,1));
-    };
+        if (amps.getNumChannels() == 0) return;
 
+        leftLevelMeter.capture(amps, 0);
+        _isMono = amps.getNumChannels() == 1;
+
+        if (!_isMono) rightLevelMeter.capture(amps, 1);
+    };
+    
     //-----------------------------------------------------------------------------------------------------------
     void LevelMeter::paint(juce::Graphics& g)
     {
@@ -192,7 +216,10 @@ namespace punch {
     {
         return _mTop + (_nLights * (_lightheight + _spacing)) + _mBottom;
     }
-
+    int UADLevelMeter::getActualWidth()
+    {
+        return _meterWidth;
+    }
     void UADLevelMeter::setRedLevel(float level)
     {
         _redLevel = level;
@@ -272,7 +299,10 @@ namespace punch {
     {
         return _mTop + (_nLights * (_lightheight + _spacing)) + _mBottom;
     }
-
+    int DrawnLEDLevelMeter::getActualWidth()
+    {
+        return _meterWidth;
+    }
     void DrawnLEDLevelMeter::clearClipped()
     {
         maxAmp.setClipped(false);

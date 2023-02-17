@@ -30,6 +30,7 @@ namespace punch {
         virtual void drawSignal(juce::Graphics& g, int x, int y, int width, int height, bool signal) = 0;
         virtual void drawClipped(juce::Graphics& g, int x, int y, int width, int height, bool clipped) = 0;
         virtual int getActualHeight() = 0;
+        virtual int getActualWidth() = 0;
         virtual void setHeight(int height) = 0;
         virtual bool canSetRange() = 0;
         virtual void setRedLevel(float) {};
@@ -53,6 +54,7 @@ namespace punch {
         void resized() override;
         void setHeight(int height);
         int getActualHeight();
+        int getActualWidth();
         void clearClipped();
         void drawLight(juce::Graphics& g, int x, int y, int width, int height, float* levels, int l);
         void drawSignal(juce::Graphics& g, int x, int y, int width, int height, bool signal);
@@ -63,6 +65,7 @@ namespace punch {
         const juce::Colour _signalColor = juce::Colour::fromRGB(0, 255, 0);
         const float _lightborder = 1.5;
         juce::Colour* _lightColors = nullptr;
+        int _meterWidth = 22;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrawnLEDLevelMeter);
     };
@@ -74,6 +77,7 @@ namespace punch {
         void resized() override;
         void setHeight(int height);
         int getActualHeight();
+        int getActualWidth();
         void clearClipped();
         void drawLight(juce::Graphics& g, int x, int y, int width, int height, float* levels, int l);
         void drawSignal(juce::Graphics& g, int x, int y, int width, int height, bool signal);
@@ -90,6 +94,7 @@ namespace punch {
         float _orangeLevel = -18.0;
         int* _lightImageIndexes = nullptr;
         juce::Image _lightImages;
+        int _meterWidth = 22;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UADLevelMeter);
     };
@@ -99,6 +104,7 @@ namespace punch {
     public:
         StereoLevelMeter(float minAmp, float maxAmp, float incAmp, int marginTop, int marginBottom, float leftAnnoWidth, float rightAnnoWidth);
         void resized() override;
+        int getNChannels();
         void capture(juce::AudioBuffer<float> amps);
         void capture(juce::AudioBuffer<double> amps);
         void init();
@@ -106,6 +112,7 @@ namespace punch {
         bool canSetRange();
         void setRange(juce::Range<double> r);
         int getActualHeight();
+        int getActualWidth();
         void setHeight(int height);
         void timerCallback() override;
     private:
@@ -116,10 +123,10 @@ namespace punch {
         dbAnnoComponent rightAnno;
         float _leftAnnoWidth;
         float _rightAnnoWidth;
-
+        bool _isMono;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StereoLevelMeter);
     };
-
+    
     namespace LevelMeterBinaryData
     {
 
