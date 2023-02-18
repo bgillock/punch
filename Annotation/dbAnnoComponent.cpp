@@ -37,13 +37,15 @@ namespace punch {
 
         int width = getBounds().getWidth();
         int textWidth = width;
-        int textHeight = 10;
+        int textHeight = 9;
 
-        g.setColour(juce::Colours::white);
+        g.setColour(juce::Colours::white);        
+        g.setFont(juce::Font("Lucinda Sans Typewriter", "Regular", 11.0f));
         if (_showSignalClipped) g.drawText("clip", 0, (int)(_maxY - (textHeight / 2.0f) - 12.0f), textWidth, textHeight, juce::Justification::centredLeft);
+        //g.drawRect(0, (int)(_maxY - (textHeight / 2.0f) - 12.0f), textWidth, textHeight);
 
         juce::StringPairArray dbAnnoPos = get_db_pairs(_minAmp, _maxAmp, _incAmp);
-        g.setFont(juce::Font("Lucinda Sans Typewriter", "Regular", 11.0f));
+
         auto font = g.getCurrentFont();
         for (auto& key : dbAnnoPos.getAllKeys())
         {
@@ -68,7 +70,7 @@ namespace punch {
             }
         }
         if (_showSignalClipped) g.drawText("signal", 0, (int)(_minY + (textHeight / 2.0f) ), textWidth, textHeight, juce::Justification::centredLeft);
-
+        //g.drawRect(0, (int)(_minY + (textHeight / 2.0f)), textWidth, textHeight);
 
     }
 
