@@ -21,7 +21,7 @@ namespace punch {
         LevelMeter(int marginTop, int marginBottom, float minAmp, float maxAmp, float) :
             _mTop(marginTop),
             _mBottom(marginBottom),
-            maxAmp(minAmp, maxAmp, 20, 10) {};
+            maxAmp(minAmp, maxAmp, 20) {};
         void paint(juce::Graphics&);
         virtual void resized() override = 0;
         void capture(juce::AudioBuffer<float> amps, int channel);

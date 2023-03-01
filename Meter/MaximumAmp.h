@@ -13,36 +13,83 @@
 
 namespace punch {
 
-    class MaximumAmp
+    enum AmpType {
+        RMS, Peak
+    };
+
+    class AmpCapture
     {
     public:
-        MaximumAmp(double minAmp, double maxAmp, int nLevels, int peakHoldTimes);
-        void capture(juce::AudioBuffer<float> amps, int channel);
-        void capture(juce::AudioBuffer<double> amps, int channel);
-        void clear();
-        float* getLevels();
+        AmpCapture(double minAmp, double maxAmp, int nLevels, AmpType ampType = AmpType::Peak);
+        virtual void capture(juce::AudioBuffer<float> amps, int channel) = 0;
+        virtual void capture(juce::AudioBuffer<double> amps, int channel) = 0;
+        virtual void clear() = 0;
+        virtual float* getLevels() = 0;        
+        virtual void setNLevels(int n) = 0;
         double getMinAmp() { return _minAmp; }
         double getMaxAmp() { return _maxAmp; }
         bool clipped();
         void setClipped(bool);
         bool signal();
         int getNLevels() { return _nLevels; }
-        void setNLevels(int n);
-    private:
-        double _minAmp;
+
+    protected:
+        float getMaxPeak(juce::AudioBuffer<float> amps, int channel, int startSample, int nSamples);
+        double getMaxPeak(juce::AudioBuffer<double> amps, int channel, int startSample, int nSamples);
+        AmpType _ampType;
+        double  _minAmp;
         double _maxAmp;
-        double _peakAmp;
         int _nLevels;
         juce::SpinLock mutex;
+        bool _signal;
+        bool _clipped;
+    };
+
+    class HistogramAmp : public AmpCapture
+    {
+    public:
+        HistogramAmp(double minAmp, double maxAmp, int nLevels) : 
+            AmpCapture(minAmp, maxAmp, nLevels) 
+        {
+            _peakHoldTimes = 10;
+            _levels = new float[_nLevels];
+        };
+        void capture(juce::AudioBuffer<float> amps, int channel) override;
+        void capture(juce::AudioBuffer<double> amps, int channel) override;
+        void clear() override;
+        float* getLevels() override;
+        void setNLevels(int n) override;
+    private:
+        double _peakAmp;
         float* _levels;
         int _peakHoldTimes;
         int _lastlight = 0;
         double _peakhold = 0.0;
         int _peakTimes = 0;
-        bool _signal;
-        bool _clipped;
     };
 
+    class MaximumAmp : public AmpCapture
+    {
+    public:
+        MaximumAmp(double minAmp, double maxAmp, int nLevels) :
+            AmpCapture(minAmp, maxAmp, nLevels)
+        {
+            _levels = new float[_nLevels];
+            _peakHoldTimes = 10;
+        };
+        void capture(juce::AudioBuffer<float> amps, int channel) override;
+        void capture(juce::AudioBuffer<double> amps, int channel) override;
+        void clear() override;
+        float* getLevels() override;
+        void setNLevels(int n) override;
+    private:
+        double _peakAmp;
+        float* _levels;
+        int _peakHoldTimes;
+        int _lastlight = 0;
+        double _peakhold = 0.0;
+        int _peakTimes = 0;
+    };
     class SimpleBuffer
     {
     public:

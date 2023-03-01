@@ -11,17 +11,44 @@
 
 namespace punch {
 
-    MaximumAmp::MaximumAmp(double min, double max, int nLevels, int peakHoldTimes)
+    AmpCapture::AmpCapture(double min, double max, int nLevels, AmpType aType)
     {
+        _ampType = aType;
         _nLevels = nLevels;
         _minAmp = min;
-        _maxAmp = max;
-        _peakHoldTimes = peakHoldTimes;
-        _levels = new float[_nLevels];
+        _maxAmp = max; 
         _signal = false;
         _clipped = false;
-        _peakAmp = -144.0;
     };
+    float AmpCapture::getMaxPeak(juce::AudioBuffer<float> amps, int channel, int startSample, int nSamples) 
+    {
+        float peakAmp = 0.0f;
+        auto* data = amps.getReadPointer(channel);
+        if (std::abs(data[startSample]) > peakAmp) peakAmp = std::abs(data[0]);
+        for (int i = startSample + 1; i < startSample + nSamples - 1; ++i)
+        {
+            if ((std::abs(data[i - 1]) <= std::abs(data[i])) &&
+                (std::abs(data[i + 1]) <= std::abs(data[i])) &&
+                (std::abs(data[i]) > peakAmp)) peakAmp = std::abs(data[i]);
+        }
+        if (std::abs(data[startSample + nSamples - 1]) > peakAmp) peakAmp = std::abs(data[startSample + nSamples - 1]);
+        return peakAmp;
+    };
+    double AmpCapture::getMaxPeak(juce::AudioBuffer<double> amps, int channel, int startSample, int nSamples) 
+    {
+        double peakAmp = 0.0;
+        auto* data = amps.getReadPointer(channel);
+        if (std::abs(data[startSample]) > peakAmp) peakAmp = std::abs(data[0]);
+        for (int i = startSample + 1; i < startSample + nSamples - 1; ++i)
+        {
+            if ((std::abs(data[i - 1]) <= std::abs(data[i])) &&
+                (std::abs(data[i + 1]) <= std::abs(data[i])) &&
+                (std::abs(data[i]) > peakAmp)) peakAmp = std::abs(data[i]);
+        }
+        if (std::abs(data[startSample + nSamples - 1]) > peakAmp) peakAmp = std::abs(data[startSample + nSamples - 1]);
+        return peakAmp;
+    };
+
     void MaximumAmp::setNLevels(int n)
     {
         delete _levels;
@@ -33,7 +60,15 @@ namespace punch {
         const juce::SpinLock::ScopedTryLockType lock(mutex);
         if (lock.isLocked())
         {
-            float db = juce::Decibels::gainToDecibels(amps.getRMSLevel(channel, 0, amps.getNumSamples()));
+            float db = 0;
+            if (_ampType == AmpType::RMS)
+            {
+                db = juce::Decibels::gainToDecibels(amps.getRMSLevel(channel, 0, amps.getNumSamples()));
+            }
+            else if (_ampType == AmpType::Peak)
+            {
+                db = juce::Decibels::gainToDecibels(getMaxPeak(amps,channel,0,amps.getNumSamples()));
+            }
             if (db > _peakAmp) _peakAmp = db;
             _clipped = _clipped || (db > _maxAmp);
             _signal = _signal || (amps.getMagnitude(channel, 0, amps.getNumSamples()) > 0.0);
@@ -44,7 +79,15 @@ namespace punch {
         const juce::SpinLock::ScopedTryLockType lock(mutex);
         if (lock.isLocked())
         {
-            double db = juce::Decibels::gainToDecibels(amps.getRMSLevel(channel, 0, amps.getNumSamples()));
+            double db = 0;
+            if (_ampType == AmpType::RMS)
+            {
+                db = juce::Decibels::gainToDecibels(amps.getRMSLevel(channel, 0, amps.getNumSamples()));
+            }
+            else if (_ampType == AmpType::Peak)
+            {
+                db = juce::Decibels::gainToDecibels(getMaxPeak(amps, channel, 0, amps.getNumSamples()));
+            }
             if (db > _peakAmp) _peakAmp = db;
             _clipped = _clipped || (db > _maxAmp);
             _signal = _signal || (amps.getMagnitude(channel, 0, amps.getNumSamples()) > 0.0);
@@ -74,12 +117,12 @@ namespace punch {
         }
         return _levels;
     }
-    bool MaximumAmp::clipped()
+    bool AmpCapture::clipped()
     {
         const juce::SpinLock::ScopedTryLockType lock(mutex);
         return _clipped;
     }
-    void MaximumAmp::setClipped(bool clip)
+    void AmpCapture::setClipped(bool clip)
     {
         const juce::SpinLock::ScopedTryLockType lock(mutex);
         if (lock.isLocked())
@@ -87,7 +130,7 @@ namespace punch {
             _clipped = clip;
         }
     }
-    bool MaximumAmp::signal()
+    bool AmpCapture::signal()
     {
         const juce::SpinLock::ScopedLockType lock(mutex);
         return _signal;
