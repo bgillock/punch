@@ -52,15 +52,22 @@ namespace punch {
             if (dbAnnoPos[key] != "")
             {
                 g.setColour(juce::Colours::white);
-                g.drawText(dbAnnoPos[key], 0, (int)(key.getFloatValue() - (textHeight / 2.0f)), textWidth, textHeight, _style);
-                int strWidth = font.getStringWidth(dbAnnoPos[key]);
+                auto annoText = dbAnnoPos[key];
                 if (_style == juce::Justification::left)
                 {
-                    g.drawRect((float)strWidth, key.getFloatValue(), (float)width - strWidth, 1.0f, 1.0f);
+                    annoText = annoText.substring(1, annoText.length()) + annoText.substring(0, 1);
+                }
+                g.drawText(annoText, 0, (int)(key.getFloatValue() - (textHeight / 2.0f)), textWidth, textHeight, _style);
+                int strWidth = font.getStringWidth(annoText);
+                float tickHeight = 1.0f;
+                if (annoText == "0") tickHeight = 2.5f;
+                if (_style == juce::Justification::left)
+                {
+                    g.drawRect((float)strWidth, key.getFloatValue() - (tickHeight/2.0f), (float)width - strWidth, tickHeight, 1.0f);
                 }
                 else // must be right
                 {
-                    g.drawRect(0.0, key.getFloatValue(), (float)width - strWidth, 1.0f, 1.0f);
+                    g.drawRect(0.0, key.getFloatValue() - (tickHeight / 2.0f), (float)width - strWidth, tickHeight, 1.0f);
                 }
             }
             else
@@ -110,10 +117,15 @@ namespace punch {
 
         for (int v = (int)minAmp; v <= (int)maxAmp; v++)
         {
-
             if (v % (int)incAmp == 0)
             {
-                addPair(pairs, "%+2.0f", (float)v, getYFromDb(v));
+                if (v == 0) {
+                    addPair(pairs, "%1.0f", (float)v, getYFromDb(v));
+                }
+                else
+                {
+                    addPair(pairs, "%+2.0f", (float)v, getYFromDb(v));
+                }
             }
             else
             {
