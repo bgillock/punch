@@ -147,21 +147,24 @@ namespace punch {
     
     void SimpleBuffer::init(int maxsize, int numChannels, bool isUsingDoublePrecision)
     {
-        _isUsingDouble = isUsingDoublePrecision;
-        _maxSize = maxsize;
-        _nChannels = numChannels;
-        _latencySamples = 0;
-        if (!_isUsingDouble)
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        if (lock.isLocked())
         {
-            _floatBuffer = std::make_unique<juce::AudioBuffer<float>>(_nChannels, _maxSize);
-            _doubleBuffer = std::make_unique<juce::AudioBuffer<double>>(1, 1);
+            _isUsingDouble = isUsingDoublePrecision;
+            _maxSize = maxsize;
+            _nChannels = numChannels;
+            if (!_isUsingDouble)
+            {
+                _floatBuffer = std::make_unique<juce::AudioBuffer<float>>(_nChannels, _maxSize);
+                _doubleBuffer = std::make_unique<juce::AudioBuffer<double>>(1, 1);
+            }
+            else
+            {
+                _floatBuffer = std::make_unique<juce::AudioBuffer<float>>(1, 1);
+                _doubleBuffer = std::make_unique<juce::AudioBuffer<double>>(_nChannels, _maxSize);
+            }
+            _nSamples = 0;
         }
-        else
-        {
-            _floatBuffer = std::make_unique<juce::AudioBuffer<float>>(1, 1);
-            _doubleBuffer = std::make_unique<juce::AudioBuffer<double>>(_nChannels, _maxSize);
-        }
-        _nSamples = 0;
     }
 
     void SimpleBuffer::clear()
@@ -182,11 +185,6 @@ namespace punch {
         const juce::SpinLock::ScopedLockType lock(_mutex);
         return _maxSize;
     }
-    int SimpleBuffer::getLatencySamples()
-    {
-        const juce::SpinLock::ScopedLockType lock(_mutex);
-        return _latencySamples;
-    }
     int SimpleBuffer::getNChannels()
     {
         const juce::SpinLock::ScopedLockType lock(_mutex);
@@ -197,15 +195,14 @@ namespace punch {
         const juce::SpinLock::ScopedLockType lock(_mutex);
         return _isUsingDouble;
     }
-    void SimpleBuffer::capture(juce::AudioBuffer<float>& bamps, juce::AudioBuffer<float>& aamps, int latency)
+    void SimpleBuffer::capture(juce::AudioBuffer<float>& amps)
     {
         const juce::SpinLock::ScopedTryLockType lock(_mutex);
         jassert(!_isUsingDouble);
         if (lock.isLocked())
         {
-            _latencySamples = latency;
-            int nsamps = bamps.getNumSamples();
-            int nchannels = bamps.getNumChannels();
+            int nsamps = amps.getNumSamples();
+            int nchannels = amps.getNumChannels();
             if (nsamps + _nSamples >= _maxSize)
             {
                 // buffer overflow!!
@@ -213,19 +210,34 @@ namespace punch {
             }
             for (int c = 0; c < nchannels; c++)
             {
-                auto readptr = bamps.getReadPointer(c);
+                auto readptr = amps.getReadPointer(c);
                 _floatBuffer->copyFrom(c, _nSamples, readptr, nsamps);
-            }
-            for (int c = 0; c < nchannels; c++)
-            {
-                auto readptr = aamps.getReadPointer(c);
-                _floatBuffer->copyFrom(c + nchannels, _nSamples, readptr, nsamps);
-
             }
             _nSamples += nsamps;
         }
     }
-    void SimpleBuffer::append(juce::AudioBuffer<float> amps, int nsamps)
+    void SimpleBuffer::capture(juce::AudioBuffer<double>& amps)
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        jassert(_isUsingDouble);
+        if (lock.isLocked())
+        {
+            int nsamps = amps.getNumSamples();
+            int nchannels = amps.getNumChannels();
+            if (nsamps + _nSamples >= _maxSize)
+            {
+                // buffer overflow!!
+                _nSamples = 0;
+            }
+            for (int c = 0; c < nchannels; c++)
+            {
+                auto readptr = amps.getReadPointer(c);
+                _doubleBuffer->copyFrom(c, _nSamples, readptr, nsamps);
+            }
+            _nSamples += nsamps;
+        }
+    }
+    void SimpleBuffer::append(juce::AudioBuffer<float>& amps, int nsamps)
     {
         const juce::SpinLock::ScopedTryLockType lock(_mutex);
         jassert(!_isUsingDouble);
@@ -248,26 +260,6 @@ namespace punch {
             _nSamples += nsamps;
         }
     }
-    void SimpleBuffer::append(juce::AudioBuffer<float> amps, int start, int n)
-    {
-        const juce::SpinLock::ScopedTryLockType lock(_mutex);
-        jassert(!_isUsingDouble);
-        if (lock.isLocked())
-        {
-            int nchannels = amps.getNumChannels();
-            if (n + _nSamples >= _maxSize)
-            {
-                // buffer overflow!!
-                _nSamples = 0;
-            }
-            for (int c = 0; c < nchannels; c++)
-            {
-                auto readptr = amps.getReadPointer(c);
-                _floatBuffer->copyFrom(c, _nSamples, &readptr[start], n);
-            }
-            _nSamples += n;
-        }
-    }
     void SimpleBuffer::trimStart(int size)
     {
         const juce::SpinLock::ScopedTryLockType lock(_mutex);
@@ -282,12 +274,87 @@ namespace punch {
             _nSamples -= size;
         }
     }
-    void SimpleBuffer::capture(juce::AudioBuffer<double>& bamps, juce::AudioBuffer<double>& aamps, int latency)
+    juce::AudioBuffer<float>* SimpleBuffer::getBuffer()
+    {
+        const juce::SpinLock::ScopedLockType lock(_mutex);
+        jassert(!_isUsingDouble);
+        return _floatBuffer.get();
+    }
+    const float* SimpleBuffer::getChannelReadPtr(int channel)
+    {
+        return _floatBuffer->getReadPointer(channel);
+    }
+    const float* SimpleBuffer::getChannelWritePtr(int channel)
+    {
+        return _floatBuffer->getWritePointer(channel);
+    }
+    void CompareBuffer::init(int maxsize, int numChannels, bool isUsingDoublePrecision)
     {
         const juce::SpinLock::ScopedTryLockType lock(_mutex);
-        jassert(_isUsingDouble);
         if (lock.isLocked())
         {
+            _isUsingDouble = isUsingDoublePrecision;
+            _maxSize = maxsize;
+            _nChannels = numChannels;
+            if (!_isUsingDouble)
+            {
+                _floatBeforeBuffer = std::make_unique<juce::AudioBuffer<float>>(_nChannels, _maxSize);
+                _doubleBeforeBuffer = std::make_unique<juce::AudioBuffer<double>>(1, 1);
+                _floatAfterBuffer = std::make_unique<juce::AudioBuffer<float>>(_nChannels, _maxSize);
+                _doubleAfterBuffer = std::make_unique<juce::AudioBuffer<double>>(1, 1);
+            }
+            else
+            {
+                _floatBeforeBuffer = std::make_unique<juce::AudioBuffer<float>>(1, 1);
+                _doubleBeforeBuffer = std::make_unique<juce::AudioBuffer<double>>(_nChannels, _maxSize);
+                _floatAfterBuffer = std::make_unique<juce::AudioBuffer<float>>(1, 1);
+                _doubleAfterBuffer = std::make_unique<juce::AudioBuffer<double>>(_nChannels, _maxSize);
+            }
+            _nSamples = 0;
+            _latencySamples = 0;
+        }
+    }
+
+    void CompareBuffer::clear()
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        if (lock.isLocked())
+        {
+            _nSamples = 0;
+        }
+    }
+    int CompareBuffer::getNSamples()
+    {
+        const juce::SpinLock::ScopedLockType lock(_mutex);
+        return _nSamples;
+    }
+    int CompareBuffer::getSize()
+    {
+        const juce::SpinLock::ScopedLockType lock(_mutex);
+        return _maxSize;
+    }
+    int CompareBuffer::getLatencySamples()
+    {
+        const juce::SpinLock::ScopedLockType lock(_mutex);
+        return _latencySamples;
+    }
+    int CompareBuffer::getNChannels()
+    {
+        const juce::SpinLock::ScopedLockType lock(_mutex);
+        return _nChannels;
+    }
+    bool CompareBuffer::getIsUsingDouble()
+    {
+        const juce::SpinLock::ScopedLockType lock(_mutex);
+        return _isUsingDouble;
+    }
+    void CompareBuffer::capture(juce::AudioBuffer<float>& bamps, juce::AudioBuffer<float>& aamps, int latency)
+    {
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        jassert(!_isUsingDouble);
+        if (lock.isLocked())
+        {
+            _latencySamples = latency;
             int nsamps = bamps.getNumSamples();
             int nchannels = bamps.getNumChannels();
             if (nsamps + _nSamples >= _maxSize)
@@ -297,34 +364,62 @@ namespace punch {
             }
             for (int c = 0; c < nchannels; c++)
             {
-                auto readptr = bamps.getReadPointer(c);
-                _doubleBuffer->copyFrom(c, _nSamples, readptr, nsamps);
-            }
-            for (int c = 0; c < aamps.getNumChannels(); c++)
-            {
-                auto readptr = aamps.getReadPointer(c);
-                _doubleBuffer->copyFrom(c + nchannels, _nSamples, readptr, nsamps);
+                _floatBeforeBuffer->copyFrom(c, _nSamples, bamps, c, 0, nsamps);
+                _floatAfterBuffer->copyFrom(c, _nSamples, aamps, c, 0, nsamps);
             }
             _nSamples += nsamps;
         }
     }
-    juce::AudioBuffer<float> SimpleBuffer::getBuffer()
+    void CompareBuffer::capture(juce::AudioBuffer<double>& bamps, juce::AudioBuffer<double>& aamps, int latency)
     {
-        const juce::SpinLock::ScopedLockType lock(_mutex);
-        jassert(!_isUsingDouble);
-        return *_floatBuffer;
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        jassert(false); // double not supported
     }
-    const float* SimpleBuffer::getChannelReadPtr(int channel)
+    void CompareBuffer::append(CompareBuffer* amps, int nsamps)
     {
-        return _floatBuffer->getReadPointer(channel);
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        if (lock.isLocked())
+        {
+            int nchannels = amps->getNChannels();
+            if (nsamps + _nSamples >= _maxSize)
+            {
+                // buffer overflow!!
+                _nSamples = 0;
+            }
+            for (int c = 0; c < nchannels; c++)
+            {
+                auto readptr = amps->getBeforeReadPtr(c);
+                _floatBeforeBuffer->copyFrom(c, _nSamples, readptr, nsamps);
+                readptr = amps->getAfterReadPtr(c);
+                _floatAfterBuffer->copyFrom(c, _nSamples, readptr, nsamps);
+            }
+            _nSamples += nsamps;
+        }
     }
-    int SimpleBuffer::getSamples(int channel, double* samplesreturned)
+    void CompareBuffer::trimStart(int size)
     {
-        const juce::SpinLock::ScopedLockType lock(_mutex);
-        jassert(_isUsingDouble);
-        auto readptr = _doubleBuffer->getReadPointer(channel);
-        juce::FloatVectorOperations::copy(samplesreturned, readptr, _nSamples);
-        return _nSamples;
+        const juce::SpinLock::ScopedTryLockType lock(_mutex);
+        if (lock.isLocked())
+        {
+            for (int c = 0; c < _nChannels; c++)
+            {
+                auto readptr = _floatBeforeBuffer->getReadPointer(c);
+                _floatBeforeBuffer->copyFrom(c, 0, &readptr[size], _nSamples - size);
+                readptr = _floatAfterBuffer->getReadPointer(c);
+                _floatAfterBuffer->copyFrom(c, 0, &readptr[size], _nSamples - size);
+            }
+            _nSamples -= size;
+        }
+    }
+
+    const float* CompareBuffer::getBeforeReadPtr(int channel)
+    {
+        return _floatBeforeBuffer->getReadPointer(channel);
+    }
+
+    const float* CompareBuffer::getAfterReadPtr(int channel)
+    {
+        return _floatAfterBuffer->getReadPointer(channel);
     }
     class VUHistogram
     {

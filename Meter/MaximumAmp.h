@@ -95,30 +95,28 @@ namespace punch {
     public:
         SimpleBuffer() { _maxSize = 0; };
         void init(int size, int nChannels, bool isUsingDouble);
-        void capture(juce::AudioBuffer<float>& bamps, juce::AudioBuffer<float>& aamps, int latency);
-        void capture(juce::AudioBuffer<double>& bamps, juce::AudioBuffer<double>& aamps, int latency);
+        void capture(juce::AudioBuffer<float>& amps);
+        void capture(juce::AudioBuffer<double>& amps);
         void clear();
         int getNSamples();
         int getSize();
         int getNChannels();
-        int getLatencySamples();
         bool getIsUsingDouble();
-        juce::AudioBuffer<float> getBuffer();
-        void append(juce::AudioBuffer<float> amps, int n);
-        void append(juce::AudioBuffer<float> amps, int start, int n);
+        juce::AudioBuffer<float> *getBuffer();
+        void append(juce::AudioBuffer<float>& amps, int n);
         void trimStart(int size);
         const float* getChannelReadPtr(int channel);
-        int getSamples(int channel, double* samplesreturned);
+        const float* getChannelWritePtr(int channel);
         void dump(std::string pre)
         {
             int a = 0;
 
             for (int c = 0; c < _floatBuffer->getNumChannels(); c++)
             {
-                std::string out = ""; 
+                std::string out = "";
                 out += std::to_string(c) + "=[";
                 auto readptr = _floatBuffer->getReadPointer(c);
-                for (int i = 0; i < std::min(8,_nSamples); i++)
+                for (int i = 0; i < std::min(8, _nSamples); i++)
                 {
                     out += std::to_string(readptr[i]) + ",";
                 }
@@ -129,6 +127,37 @@ namespace punch {
     private:
         std::unique_ptr<juce::AudioBuffer<float>> _floatBuffer;
         std::unique_ptr<juce::AudioBuffer<double>> _doubleBuffer;
+        juce::SpinLock _mutex;
+        int _maxSize;
+        int _nSamples;
+        int _nChannels;
+        bool _isUsingDouble;
+    };
+
+    class CompareBuffer
+    {
+    public:
+        CompareBuffer() { _maxSize = 0; };
+        void init(int size, int nChannels, bool isUsingDouble);
+        void capture(juce::AudioBuffer<float>& bamps, juce::AudioBuffer<float>& aamps, int latency);
+        void capture(juce::AudioBuffer<double>& bamps, juce::AudioBuffer<double>& aamps, int latency);
+        void clear();
+        int getNSamples();
+        int getSize();
+        int getNChannels();
+        int getLatencySamples();
+        bool getIsUsingDouble();
+        juce::AudioBuffer<float>* getBuffer();
+        void append(CompareBuffer* amps, int n);
+        void trimStart(int size);
+        const float* getBeforeReadPtr(int channel);
+        const float* getAfterReadPtr(int channel);
+
+    private:  
+        std::unique_ptr<juce::AudioBuffer<float>> _floatBeforeBuffer;
+        std::unique_ptr<juce::AudioBuffer<double>> _doubleBeforeBuffer;
+        std::unique_ptr<juce::AudioBuffer<float>> _floatAfterBuffer;
+        std::unique_ptr<juce::AudioBuffer<double>> _doubleAfterBuffer;
         juce::SpinLock _mutex;
         int _latencySamples = 0;
         int _maxSize;
